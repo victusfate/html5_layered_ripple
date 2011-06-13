@@ -158,6 +158,7 @@ vector2dCompareY = (vector2dA, vector2dB) ->
 	vector2dA.y - vector2dB.y
 
 changePicture = (url) ->
+	console.log "changePicture "+url
 	backgroundURL = url
 	initialization()
 window.changePicture = changePicture
@@ -284,7 +285,7 @@ $ ->
 	getTime()
 
 $(window).load -> 
-	changePicture('images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg')
+	changePicture('images/Texture__Brushed_Metal_by_meiastar.jpg')
 	console.log "just called after window load"
 	getTime()
 
