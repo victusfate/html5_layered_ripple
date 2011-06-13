@@ -5,33 +5,293 @@
 
   <title>victusfate/html5_layered_ripple @ GitHub</title>
 
-  <style type="text/css">
+  <style type="text/css" media="screen">
+	* { position: relative; z-index:1; 
+		text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black; 
+		color: #A7E5FF;
+	}  
+	select {
+		text-shadow: none;
+	}
     body {
       margin-top: 1.0em;
-      background-color: #A7E5FF;
+      background-color: #333; 
       font-family: Helvetica, Arial, FreeSans, san-serif;
       color: #000000;
+	  position: static;
     }
     #container {
       margin: 0 auto;
       width: 700px;
+	  position: static;
     }
-    h1 { font-size: 3.8em; color: #581a00; margin-bottom: 3px; }
+    h1 { font-size: 3.8em; margin-bottom: 3px; }
     h1 .small { font-size: 0.4em; }
     h1 a { text-decoration: none }
-    h2 { font-size: 1.5em; color: #581a00; }
-    h3 { text-align: center; color: #581a00; }
-    a { color: #581a00; }
+    h2 { font-size: 1.5em; }
+    h3 { text-align: center; }
+    a { }
     .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
     .download { float: right; }
     pre { background: #000; color: #fff; padding: 15px;}
     hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
     .footer { text-align:center; padding-top:30px; font-style: italic; }
+	#screen { 
+		position:absolute; top: 0; left:0; border:0; 
+		z-index:2; 
+/*		background:url(images/Texture__Brushed_Metal_by_meiastar.jpg); */
+		width:100%; 
+		height: 100%; 
+		position: fixed; 
+	    left: 0px; 
+	    top: 0px; 
+	    z-index: 0;		
+	}
   </style>
+	<script type='text/javascript' src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
+	<script type='text/javascript' src="http://jashkenas.github.com/coffee-script/extras/coffee-script.js"></script>
+<script type='text/coffeescript'>
+
+timeStep = 1
+scaleThing = 4
+target = null
+targetPosition = null
+mouseStart = null
+screenWidth = 0
+screenHeight = 0
+scaleWidth = 1
+scaleHeight = 1
+pond = null
+textureImg = null
+interval = null
+backgroundURL = "images/waterbackground.png"
+window.timeStep = timeStep
+window.scaleThing = scaleThing
+window.target = target
+window.targetPosition = targetPosition
+window.mouseStart = mouseStart
+window.screenWidth = screenWidth
+window.screenHeight = screenHeight
+window.pond = pond
+window.textureImg = textureImg
+window.interval = interval
+window.backgroundURL = backgroundURL
+
+water = initialization = getMousePosition = mainLoop = mouseMove = mouseDown = mouseUp = null
+
+
+getTime = ->
+	d = new Date()
+	console.log d.toString()
+
+window.getTime = getTime
+
+
+###
+$("screen").mousemove -> (event) ->
+	d = new Date()
+	@t = d
+	console.log "mouse move x,y " + event.pageX + "," event.pageY + " at time " + @t.toString()
+	[x,y] = [event.pageX,event.pageY]
+	echo x,y,@t
+
+
+echo = (x,y,initT) =>
+	console.log "echo x,y "+x+","+y+ " time "+initT.toString()
+	d = new Date()
+	r = ParseInt d - initT
+	ctx = $('canvas').get(0).getContext('2d')
+	ctx.beginPath()
+    rad = ctx.createRadialGradient(x, y, 1, x, y, r)
+    rad.addColorStop(0, 'rgba('+c+',1)')
+    rad.addColorStop(1, 'rgba('+c+',0)')
+    ctx.fillStyle = rad
+    ctx.arc(x, y, r, 0, Math.PI*2, false)
+    ctx.fill()
+###
+
+class Vector2d
+	constructor: (@x, @y) ->
+
+	add : (other) ->
+		new Vector2d(@x + other.x, @y + other.y)
+  
+	sub : (other) ->
+		new Vector2d(@x - other.x, @y - other.y)
+  
+	scale : (scale) ->
+		new Vector2d(@x * scale, @y * scale)
+  
+	length : ->
+		Math.sqrt @dot(this)
+  
+	angle : (other) ->
+		Math.acos @dot(other) / (@length() * other.length())
+	
+	setAngleVector : (len, angle) ->
+		@x = -len * Math.sin(angle)
+		@y = len * Math.cos(angle)
+		this
+  
+	dot : (other) ->
+		@x * other.x + @y * other.y
+  
+	normalize : ->
+		l = @length()
+		new Vector2d(@x / l, @y / l)
+  
+	clone : ->
+		new Vector2d(@x, @y)
+  
+	distanceSquared : (other) ->
+		xlen = @x - other.x
+		ylen = @y - other.y
+		xlen * xlen + ylen * ylen
+  
+	toString : ->
+		"(" + @x + ", " + @y + ")"
+
+vector2dCompareX = (vector2dA, vector2dB) ->
+	vector2dA.x - vector2dB.x
+
+vector2dCompareY = (vector2dA, vector2dB) ->
+	vector2dA.y - vector2dB.y
+
+changePicture = (url) ->
+	backgroundURL = url
+	initialization()
+window.changePicture = changePicture
+
+setPixel = (imageData, x, y, r, g, b, a) ->
+	index = (x + y * imageData.width) * scaleThing
+	imageData.data[index + 0] = r
+	imageData.data[index + 1] = g
+	imageData.data[index + 2] = b
+	imageData.data[index + 3] = a
+	return
+
+class Water
+	constructor: (@x, @y, @damping, @shading, @refraction, ctx) ->
+		@bufferSize = @x * @y
+#		@background = ctx.getImageData(0, 0, screenWidth, screenHeight).data
+#		@imageData = ctx.getImageData(0, 0, screenWidth, screenHeight)
+		@background = ctx.getImageData(0, 0, @x, @y).data
+		@imageData = ctx.getImageData(0, 0, @x, @y)
+
+		@buffer1 = []
+		@buffer2 = []
+		i = 0
+
+		while i < @bufferSize
+			@buffer1.push 0
+			@buffer2.push 0
+			i++
+
+	update : ->
+		i = @x + 1
+		x = 1
+
+		while i < (@bufferSize - @x)
+			if (x < @x)
+				@buffer2[i] = ((@buffer1[i - 1] + @buffer1[i + 1] + @buffer1[i - @x] + @buffer1[i + @x]) / 2) - @buffer2[i]
+				@buffer2[i] *= @damping
+			else
+				x = 0
+			i++
+			x++
+		temp = @buffer1
+		@buffer1 = @buffer2
+		@buffer2 = temp
+
+
+	draw : (ctx) ->
+		imageDataArray = @imageData.data
+		i = @x + 1
+		index = (@x + 1) * scaleThing
+
+		while i < @bufferSize - (1 + @x)
+			xOffset = ~~(@buffer1[i - 1] - @buffer1[i + 1])
+			yOffset = ~~(@buffer1[i - @x] - @buffer1[i + @x])
+			shade = xOffset * @shading
+			texture = index + (xOffset * @refraction + yOffset * @refraction * @x) * scaleThing
+			imageDataArray[index] = @background[texture] + shade
+			imageDataArray[index + 1] = @background[texture + 1] + shade
+			imageDataArray[index + 2] = 50 + @background[texture + 2] + shade
+			i++
+			index += scaleThing
+		ctx.putImageData @imageData, 0, 0
+#		ctx.scale(scaleWidth,scaleHeight)
+#		ctx.drawImage @tImage, 0, 0, screenWidth, screenHeight
+
+initialization = ->
+	iWidth = iHeight = 256
+	screenWidth = 256
+	screenHeight = screenWidth
+	scaleWidth = $(window).width()/iWidth
+	scaleHeight = $(window).height()/iHeight
+	canvas = document.getElementById("screen")
+	if canvas.getContext
+		canvas.width = screenWidth
+		canvas.height = screenHeight
+		textureImg = new Image(iWidth, iHeight)
+		textureImg.src = backgroundURL
+		console.log "width height image width height " + canvas.width + "," + canvas.height + "," + textureImg.width + "," + textureImg.height
+		document.getElementById("screen").getContext("2d").drawImage textureImg, 0, 0, screenWidth, screenHeight
+		pond = new Water(iWidth, iHeight, 1 - parseFloat(document.config.dampingselect.options[document.config.dampingselect.selectedIndex].value), parseInt(document.config.shadingselect.options[document.config.shadingselect.selectedIndex].value), parseInt(document.config.refractionselect.options[document.config.refractionselect.selectedIndex].value), canvas.getContext("2d"))
+		clearInterval interval	if interval?
+		console.log "initialization about to call mainLoop"
+		interval = setInterval(mainLoop, timeStep)
+window.initialization = initialization
+
+
+getMousePosition = (e) ->
+	e = window.event	unless e
+	a
+	if e.pageX or e.pageY
+		a = new Vector2d(e.pageX, e.pageY)
+	else a = new Vector2d(e.clientX, e.clientY)  if e.clientX or e.clientY
+	console.log "getMousePosition x y "+a.toString()
+	a
+window.getMousePosition
+
+mainLoop = ->
+	ctx = document.getElementById("screen").getContext("2d")
+	pond.update()
+	pond.draw ctx
+
+mouseMove = (e) ->
+	target.move e
+window.mouseMove = mouseMove
+
+mouseDown = (e) ->
+	mouse = getMousePosition(e).sub(new Vector2d(document.getElementById("screen").offsetLeft, document.getElementById("screen").offsetTop))
+	fy = Math.floor(mouse.y/scaleHeight)
+	fx = Math.floor(mouse.x/scaleWidth)
+	console.log "mouse x y "+mouse.x+","+mouse.y+" scaled buffer offset "+fy * pond.x + fx+" size "+pond.buffer1.length
+	pond.buffer1[fy * pond.x + fx] += 200
+window.mouseDown = mouseDown
+
+mouseUp = (e) ->
+	target = null
+	mouseStart = null
+	document.getElementById("screen").onmousemove = null
+window.mouseUp = mouseUp
+
+
+
+$ ->
+	console.log "we got here"
+	getTime()
+	setTimeout "changePicture('images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg')",10
+</script>
+
 </head>
 
 <body>
-  <a href="http://github.com/victusfate/html5_layered_ripple"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
+	<canvas id="screen" width="1000" height="1000" onmouseDown="mouseDown(event);" onmouseUp="mouseUp(event);"> 
+  		This application requires a HTML5 compliant browser.
+  	</canvas>
+  <a href="http://github.com/victusfate/html5_layered_ripple" style="position: absolute; top: 0; right: 0; border: 0;"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
 
   <div id="container">
 
@@ -45,12 +305,57 @@
     <h1><a href="http://github.com/victusfate/html5_layered_ripple">html5_layered_ripple</a>
       <span class="small">by <a href="http://github.com/victusfate">victusfate</a></span></h1>
 
+	<div> 
+	  	<div> 
+		  	<form name="config"> 
+		  		<label for="dampingselect">Damping</label> 
+		  		<select id="dampingselect" onchange="changePicture(backgroundURL);"> 
+					<option>0.1</option> 
+					<option>0.05</option> 
+					<option selected>0.01</option> 
+					<option>0.001</option> 
+					<option>0.0001</option> 
+					<option>0</option> 
+				</select> 
+		  		<label for="shadingselect">Shading</label> 
+		  		<select id="shadingselect" onchange="changePicture(backgroundURL);"> 
+		  			<option>0</option> 
+					<option selected>1</option> 
+					<option>2</option> 
+					<option>3</option> 
+					<option>4</option> 
+					<option>5</option> 
+				</select> 
+				<label for="refractionselect">Refraction</label> 
+		  		<select id="refractionselect" onchange="changePicture(backgroundURL);"> 
+		  			<option>0</option> 
+					<option selected>1</option> 
+					<option>2</option> 
+					<option>3</option> 
+					<option>4</option> 
+				</select> 
+				<br/> 
+				<br/> 
+				<img onclick='changePicture("images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg");' src="images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg" width="50" height="50"> 
+				<img onclick='changePicture("images/Green_Copper_n_Gold_Metal_Leaf_by_Enchantedgal_Stock.jpg");' src="images/Green_Copper_n_Gold_Metal_Leaf_by_Enchantedgal_Stock.jpg" width="50" height="50"> 
+				<img onclick='changePicture("images/Metallic_Sun_Shine_Gold_Sheet_by_Enchantedgal_Stock.jpg");' src="images/Metallic_Sun_Shine_Gold_Sheet_by_Enchantedgal_Stock.jpg" width="50" height="50"> 
+				<img onclick='changePicture("images/Texture__Brushed_Metal_by_meiastar.jpg");' src="images/Texture__Brushed_Metal_by_meiastar.jpg" width="50" height="50"> 
+				<img onclick='changePicture("images/Texture___Blue_Glitter_by_reno_fan_girl_Stock.jpg");' src="images/Texture___Blue_Glitter_by_reno_fan_girl_Stock.jpg" width="50" height="50"> 
+				<img onclick='changePicture("images/slide_scratch_texture.jpg");' src="images/slide_scratch_texture.jpg" width="50" height="50"> 
+		  	</form>
+		</div>
+	</div>
+
+
+
+
     <div class="description">
-      layered rippling water html5 effect (using http://www.nixuz.com:8080/html5/water/water.html )
+      layered rippling water html5 effect (using <a href="http://www.nixuz.com:8080/html5/water/water.html">http://www.nixuz.com:8080/html5/water/water.html</a> )
     </div>
 
     <h2>Contact</h2>
-<p>Mark Essel (messel@gmail.com)<br/>      </p>
+<p>Mark Essel (messel@gmail.com)
+<br/>      </p>
 
 
     <h2>Download</h2>
