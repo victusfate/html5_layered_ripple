@@ -282,7 +282,14 @@ window.mouseUp = mouseUp
 $ ->
 	console.log "we got here"
 	getTime()
-	setTimeout "changePicture('images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg')",10
+
+$(window).load -> 
+	changePicture('images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg')
+	console.log "just called after window load"
+	getTime()
+
+
+
 </script>
 
 </head>
@@ -336,7 +343,7 @@ $ ->
 				</select> 
 				<br/> 
 				<br/> 
-				<img onclick='changePicture("images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg");' src="images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg" width="50" height="50"> 
+				<img id="goldpaint" onclick='changePicture("images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg");' src="images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg" width="50" height="50"> 
 				<img onclick='changePicture("images/Green_Copper_n_Gold_Metal_Leaf_by_Enchantedgal_Stock.jpg");' src="images/Green_Copper_n_Gold_Metal_Leaf_by_Enchantedgal_Stock.jpg" width="50" height="50"> 
 				<img onclick='changePicture("images/Metallic_Sun_Shine_Gold_Sheet_by_Enchantedgal_Stock.jpg");' src="images/Metallic_Sun_Shine_Gold_Sheet_by_Enchantedgal_Stock.jpg" width="50" height="50"> 
 				<img onclick='changePicture("images/Texture__Brushed_Metal_by_meiastar.jpg");' src="images/Texture__Brushed_Metal_by_meiastar.jpg" width="50" height="50"> 
