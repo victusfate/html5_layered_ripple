@@ -65,6 +65,13 @@ pond = null
 textureImg = null
 interval = null
 backgroundURL = "images/waterbackground.png"
+Vector2d = null
+propagate_rings = null
+rings = []
+ring_color = [255,255,255]
+ring_color2 = [0,0,255]
+
+
 window.timeStep = timeStep
 window.scaleThing = scaleThing
 window.target = target
@@ -76,6 +83,9 @@ window.pond = pond
 window.textureImg = textureImg
 window.interval = interval
 window.backgroundURL = backgroundURL
+window.propagate_rings = propagate_rings
+window.rings = rings
+window.ring_color = ring_color
 
 water = initialization = getMousePosition = mainLoop = mouseMove = mouseDown = mouseUp = null
 
@@ -87,31 +97,8 @@ getTime = ->
 window.getTime = getTime
 
 
-###
-$("screen").mousemove -> (event) ->
-	d = new Date()
-	@t = d
-	console.log "mouse move x,y " + event.pageX + "," event.pageY + " at time " + @t.toString()
-	[x,y] = [event.pageX,event.pageY]
-	echo x,y,@t
-
-
-echo = (x,y,initT) =>
-	console.log "echo x,y "+x+","+y+ " time "+initT.toString()
-	d = new Date()
-	r = ParseInt d - initT
-	ctx = $('canvas').get(0).getContext('2d')
-	ctx.beginPath()
-    rad = ctx.createRadialGradient(x, y, 1, x, y, r)
-    rad.addColorStop(0, 'rgba('+c+',1)')
-    rad.addColorStop(1, 'rgba('+c+',0)')
-    ctx.fillStyle = rad
-    ctx.arc(x, y, r, 0, Math.PI*2, false)
-    ctx.fill()
-###
-
 class Vector2d
-	constructor: (@x, @y) ->
+	constructor: (@x, @y, @t=0) ->
 
 	add : (other) ->
 		new Vector2d(@x + other.x, @y + other.y)
@@ -156,6 +143,50 @@ vector2dCompareX = (vector2dA, vector2dB) ->
 
 vector2dCompareY = (vector2dA, vector2dB) ->
 	vector2dA.y - vector2dB.y
+
+###
+propagate_rings = ->
+	iWidth = iHeight = 256
+	screenWidth = 256
+	screenHeight = screenWidth
+	scaleWidth = $(window).width()/iWidth
+	scaleHeight = $(window).height()/iHeight
+	canvas = document.getElementById("screen")
+	if canvas.getContext
+		canvas.width = screenWidth
+		canvas.height = screenHeight	
+		textureImg = new Image(iWidth,iHeight)
+		textureImg.src = backgroundURL
+
+	ctx = canvas.getContext("2d")
+	ctx.drawImage textureImg, 0, 0, screenWidth, screenHeight
+
+	currentTime = new Date()
+	d = currentTime.getTime()
+	rings = ( v for v in rings when (d-v.t) < 10000 )
+#	console.log "rings after filter "+rings.length
+
+	for v in rings
+		r = (d - v.t)/100
+		ctx.beginPath()
+		rad = ctx.createRadialGradient(v.x, v.y, 1, v.x, v.y, 200)
+		rad.addColorStop(0, 'rgba('+ring_color2+','+0+')')
+		rad.addColorStop(.75, 'rgba('+ring_color2+','+.4+')')
+		rad.addColorStop(1, 'rgba('+ring_color2+','+1+')')
+		ctx.fillStyle = rad
+		ctx.arc(v.x, v.y, r, 0, Math.PI*2, false)
+		ctx.fill()
+
+$("#screen").mousemove (e) ->
+	temp_mouse = getMousePosition(e).sub(new Vector2d(document.getElementById("screen").offsetLeft, document.getElementById("screen").offsetTop))
+	t = new Date()
+	fy = Math.floor(temp_mouse.y/scaleHeight)
+	fx = Math.floor(temp_mouse.x/scaleWidth)
+	mouse = new Vector2d(fx,fy,t.getTime())
+	rings.push(mouse)
+	console.log "mouse x y "+mouse.x+","+mouse.y+" scaled buffer offset "+fy * pond.x + fx+" t "+t.getTime()+" rings "+rings.length
+###	
+
 
 changePicture = (url) ->
 	console.log "changePicture "+url
@@ -221,8 +252,6 @@ class Water
 			i++
 			index += scaleThing
 		ctx.putImageData @imageData, 0, 0
-#		ctx.scale(scaleWidth,scaleHeight)
-#		ctx.drawImage @tImage, 0, 0, screenWidth, screenHeight
 
 initialization = ->
 	iWidth = iHeight = 256
@@ -257,6 +286,7 @@ window.getMousePosition
 
 mainLoop = ->
 	ctx = document.getElementById("screen").getContext("2d")
+#	propagate_rings()
 	pond.update()
 	pond.draw ctx
 
@@ -278,6 +308,11 @@ mouseUp = (e) ->
 	document.getElementById("screen").onmousemove = null
 window.mouseUp = mouseUp
 
+$("#screen").mousemove (e) ->
+	temp_mouse = getMousePosition(e).sub(new Vector2d(document.getElementById("screen").offsetLeft, document.getElementById("screen").offsetTop))
+	fy = Math.floor(temp_mouse.y/scaleHeight)
+	fx = Math.floor(temp_mouse.x/scaleWidth)
+	pond.buffer1[fy * pond.x + fx] += 200
 
 
 $ ->
@@ -297,7 +332,7 @@ $(window).load ->
 
 <body>
 	<canvas id="screen" width="1000" height="1000" onmouseDown="mouseDown(event);" onmouseUp="mouseUp(event);"> 
-  		This application requires a HTML5 compliant browser.
+  		<h1>This application requires a HTML5 compliant browser.</h1>
   	</canvas>
   <a href="http://github.com/victusfate/html5_layered_ripple" style="position: absolute; top: 0; right: 0; border: 0;"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
 
