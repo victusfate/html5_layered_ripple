@@ -48,8 +48,14 @@
 	    z-index: 0;		
 	}
   </style>
-	<script type='text/javascript' src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
-	<script type='text/javascript' src="http://jashkenas.github.com/coffee-script/extras/coffee-script.js"></script>
+	<script type='text/javascript' src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script> 
+	<script>
+		!window.jQuery && document.write('<script src="jquery-1.6.1.min.js"><\/script>');
+	</script>
+	<script type='text/javascript' src="http://jashkenas.github.com/coffee-script/extras/coffee-script.js"></script>  
+	<script>
+		!window.CoffeeScript && document.write('<script src="coffee-script.js"><\/script>');
+	</script>
 <script type='text/coffeescript'>
 
 timeStep = 1
@@ -381,11 +387,6 @@ $(window).load ->
 				<br/> 
 				<br/> 
 				<img id="goldpaint" onclick='changePicture("images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg");' src="images/Gold_Paint_on_Canvas_Texture_by_Enchantedgal_Stock.jpg" width="50" height="50"> 
-				<img onclick='changePicture("images/Green_Copper_n_Gold_Metal_Leaf_by_Enchantedgal_Stock.jpg");' src="images/Green_Copper_n_Gold_Metal_Leaf_by_Enchantedgal_Stock.jpg" width="50" height="50"> 
-				<img onclick='changePicture("images/Metallic_Sun_Shine_Gold_Sheet_by_Enchantedgal_Stock.jpg");' src="images/Metallic_Sun_Shine_Gold_Sheet_by_Enchantedgal_Stock.jpg" width="50" height="50"> 
-				<img onclick='changePicture("images/Texture__Brushed_Metal_by_meiastar.jpg");' src="images/Texture__Brushed_Metal_by_meiastar.jpg" width="50" height="50"> 
-				<img onclick='changePicture("images/Texture___Blue_Glitter_by_reno_fan_girl_Stock.jpg");' src="images/Texture___Blue_Glitter_by_reno_fan_girl_Stock.jpg" width="50" height="50"> 
-				<img onclick='changePicture("images/slide_scratch_texture.jpg");' src="images/slide_scratch_texture.jpg" width="50" height="50"> 
 		  	</form>
 		</div>
 	</div>
